@@ -27,11 +27,6 @@ jobs:
           node-version: "20"
           cache: "npm"
 
-      - name: Setup GitHub Pages config
-        uses: actions/configure-pages@v5
-        with:
-          static_site_generator: next
-
       - name: Install dependencies
         run: npm ci || npm install --legacy-peer-deps
 
@@ -41,6 +36,14 @@ jobs:
           NEXT_PUBLIC_NVIDIA_API_KEY: ${{ secrets.NEXT_PUBLIC_NVIDIA_API_KEY || vars.NEXT_PUBLIC_NVIDIA_API_KEY }}
           NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY || vars.NVIDIA_API_KEY }}
         run: npm run build
+
+      - name: Disable Jekyll
+        run: touch ./out/.nojekyll
+
+      - name: Setup GitHub Pages config
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
 
       - name: Upload GitHub Pages artifact
         uses: actions/upload-pages-artifact@v3
