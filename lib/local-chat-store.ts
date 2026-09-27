@@ -25,7 +25,7 @@ const STORAGE_KEYS = {
   API_KEY: "zola_local_nvidia_api_key",
 }
 
-// Single Dedicated Model
+// Supported Models on NVIDIA NIM
 export const NEMOTRON_MODEL = {
   id: "nvidia/nemotron-3-ultra-550b-a55b",
   name: "NVIDIA Nemotron 3 Ultra",
@@ -35,7 +35,16 @@ export const NEMOTRON_MODEL = {
   hasThinking: true,
 }
 
-export const NVIDIA_MODELS = [NEMOTRON_MODEL]
+export const DEEPSEEK_MODEL = {
+  id: "deepseek-ai/deepseek-v4.1-flash",
+  name: "DeepSeek V4.1 Flash",
+  version: "NVIDIA NIM",
+  description: "High-Speed Frontier Reasoning Model hosted on NVIDIA DGX Cloud",
+  contextWindow: 32768,
+  hasThinking: true,
+}
+
+export const NVIDIA_MODELS = [NEMOTRON_MODEL, DEEPSEEK_MODEL]
 export const DEFAULT_MODEL = NEMOTRON_MODEL.id
 
 export function getStoredApiKey(): string {

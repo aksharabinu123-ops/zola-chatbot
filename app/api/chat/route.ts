@@ -53,32 +53,53 @@ Always provide helpful, intelligent, polite, and insightful responses.`
       requestPayload.chat_template_kwargs = { enable_thinking: true }
     }
 
-    let response = await fetch(
-      "https://integrate.api.nvidia.com/v1/chat/completions",
-      {
+    const backupKey = process.env.NVIDIA_API_KEY_BACKUP
+
+    async function makeNvidiaRequest(keyToUse: string, payload: Record<string, unknown>) {
+      let res = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
+          Authorization: `Bearer ${keyToUse}`,
         },
-        body: JSON.stringify(requestPayload),
-      }
-    )
+        body: JSON.stringify(payload),
+      })
 
-    // Fallback: If model doesn't support chat_template_kwargs, retry without it
-    if (!response.ok && requestPayload.chat_template_kwargs) {
-      delete requestPayload.chat_template_kwargs
-      response = await fetch(
-        "https://integrate.api.nvidia.com/v1/chat/completions",
-        {
+      if (!res.ok && payload.chat_template_kwargs) {
+        const withoutKwargs = { ...payload }
+        delete withoutKwargs.chat_template_kwargs
+        res = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${apiKey}`,
+            Authorization: `Bearer ${keyToUse}`,
           },
-          body: JSON.stringify(requestPayload),
-        }
-      )
+          body: JSON.stringify(withoutKwargs),
+        })
+      }
+      return res
+    }
+
+    let response = await makeNvidiaRequest(apiKey, requestPayload)
+
+    // Automatic Key Failover: If primary key ran out of tokens (402), unauthorized (401), or rate limited (429), try backup key
+    if (!response.ok && backupKey && backupKey !== apiKey && (response.status === 401 || response.status === 402 || response.status === 429)) {
+      console.warn(`Primary key returned ${response.status}; failing over to backup key`)
+      response = await makeNvidiaRequest(backupKey, requestPayload)
+    }
+
+    // Model Failover: If model is not found or returns 400/404, try alternative model
+    if (!response.ok && (response.status === 404 || response.status === 400)) {
+      const fallbackModel = targetModel === "deepseek-ai/deepseek-v4.1-flash"
+        ? "nvidia/nemotron-3-ultra-550b-a55b"
+        : "deepseek-ai/deepseek-v4.1-flash"
+      console.warn(`Model ${targetModel} returned ${response.status}; trying fallback model ${fallbackModel}`)
+      const fallbackPayload = { ...requestPayload, model: fallbackModel }
+      delete fallbackPayload.chat_template_kwargs
+      response = await makeNvidiaRequest(apiKey, fallbackPayload)
+      if (!response.ok && backupKey && backupKey !== apiKey) {
+        response = await makeNvidiaRequest(backupKey, fallbackPayload)
+      }
     }
 
     if (!response.ok) {
