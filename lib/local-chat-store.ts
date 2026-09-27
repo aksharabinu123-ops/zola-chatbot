@@ -35,6 +35,7 @@ export const NEMOTRON_MODEL = {
   hasThinking: true,
 }
 
+export const NVIDIA_MODELS = [NEMOTRON_MODEL]
 export const DEFAULT_MODEL = NEMOTRON_MODEL.id
 
 export function getStoredApiKey(): string {

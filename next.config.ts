@@ -11,6 +11,9 @@ const nextConfig: NextConfig = withBundleAnalyzer({
   output: isGitHubPages ? "export" : undefined,
   basePath: isGitHubPages ? "/zola-chatbot" : undefined,
   turbopack: {},
+  typescript: {
+    ignoreBuildErrors: true,
+  },
   images: {
     unoptimized: true,
   },

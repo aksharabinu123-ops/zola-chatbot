@@ -1,6 +1,16 @@
 import { NextResponse } from "next/server"
 
 export const maxDuration = 60
+export const dynamic = "force-static"
+
+export async function GET() {
+  return NextResponse.json({
+    status: "online",
+    name: "Zola Chatbot API",
+    model: "nvidia/nemotron-3-ultra-550b-a55b",
+    author: "Akshara",
+  })
+}
 
 export async function POST(req: Request) {
   try {

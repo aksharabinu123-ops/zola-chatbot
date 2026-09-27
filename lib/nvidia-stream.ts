@@ -27,24 +27,53 @@ const CHAT_API_ENDPOINT = "/api/chat"
 export function streamNvidiaChat(options: StreamOptions): StreamHandle {
   const controller = new AbortController()
   const apiKey = getStoredApiKey()
+  const effectiveKey =
+    apiKey ||
+    process.env.NEXT_PUBLIC_NVIDIA_API_KEY ||
+    ""
+
+  const isStaticExport =
+    typeof window !== "undefined" &&
+    (window.location.hostname.includes("github.io") || !!effectiveKey)
+
+  const endpoint = isStaticExport
+    ? "https://integrate.api.nvidia.com/v1/chat/completions"
+    : "/api/chat"
 
   let fullContent = ""
   let fullReasoning = ""
 
   ;(async () => {
     try {
-      const response = await fetch(CHAT_API_ENDPOINT, {
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      }
+      if (isStaticExport && effectiveKey) {
+        headers["Authorization"] = `Bearer ${effectiveKey}`
+      }
+
+      const payload = isStaticExport
+        ? {
+            model: options.model,
+            messages: options.messages,
+            temperature: options.temperature ?? 0.7,
+            top_p: 0.95,
+            max_tokens: 8192,
+            stream: true,
+            ...(options.enableThinking ? { chat_template_kwargs: { enable_thinking: true } } : {}),
+          }
+        : {
+            model: options.model,
+            messages: options.messages,
+            temperature: options.temperature ?? 0.7,
+            enableThinking: options.enableThinking ?? true,
+            apiKey: apiKey || undefined,
+          }
+
+      const response = await fetch(endpoint, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: options.model,
-          messages: options.messages,
-          temperature: options.temperature ?? 0.7,
-          enableThinking: options.enableThinking ?? true,
-          apiKey: apiKey || undefined,
-        }),
+        headers,
+        body: JSON.stringify(payload),
         signal: controller.signal,
       })
 
